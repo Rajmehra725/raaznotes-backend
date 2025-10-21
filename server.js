@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(cors({
   origin: [
     "https://raaznotes-frontend.onrender.com", // Render frontend URL
-    "http://localhost:3000" // Local frontend
+     // Local frontend
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
