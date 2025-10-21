@@ -27,7 +27,7 @@ mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log("✅ MongoDB connected"))
+.then(() => console.log("✅ MongoDB connected raaz mehra"))
 .catch(err => console.error("❌ MongoDB connection error:", err));
 
 // ✅ Routes
