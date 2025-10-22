@@ -7,6 +7,8 @@ const noteSchema = new mongoose.Schema({
   reminder: Date,
   color: String,
   pinned: Boolean,
+  image: { type: String },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model("Note", noteSchema);
