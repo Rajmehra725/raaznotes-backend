@@ -121,7 +121,7 @@ const PORT = process.env.PORT || 5000;
 app.get("/api/check-cloudinary", async (req, res) => {
   try {
     const result = await cloudinary.api.ping();
-    res.json({ success: true, message: "Cloudinary connected successfully!", result });
+    res.json({ success: true, message: "Cloudinary connected successfully raaz!", result });
   } catch (err) {
     console.error("❌ Cloudinary connection error:", err);
     res.status(500).json({ success: false, error: err.message });
