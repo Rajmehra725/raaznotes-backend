@@ -1,10 +1,10 @@
 import express from "express";
 import { addFeeling, getFeelings, deleteFeeling } from "../controllers/feelingController.js";
+import { protect } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
-// ⚠️ Testing purpose: protect middleware remove kar diya
-router.post("/add", addFeeling);
-router.get("/", getFeelings);
-router.delete("/:id", deleteFeeling);
+router.post("/add", protect, addFeeling);
+router.get("/", protect, getFeelings);
+router.delete("/:id", protect, deleteFeeling);
 
 export default router;

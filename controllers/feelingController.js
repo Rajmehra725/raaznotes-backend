@@ -1,13 +1,14 @@
 import Feeling from "../models/Feeling.js";
-import mongoose from "mongoose";
-
-// ✅ Temporary test userId
-const TEST_USER_ID = new mongoose.Types.ObjectId();
 
 export const addFeeling = async (req, res) => {
   try {
     const { feelingText, mood } = req.body;
-    const newFeeling = await Feeling.create({ userId: TEST_USER_ID, feelingText, mood });
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    const newFeeling = await Feeling.create({
+      userId: req.user._id,
+      feelingText,
+      mood
+    });
     res.status(201).json(newFeeling);
   } catch (error) {
     console.error(error);
@@ -17,7 +18,12 @@ export const addFeeling = async (req, res) => {
 
 export const getFeelings = async (req, res) => {
   try {
-    const feelings = await Feeling.find({ userId: TEST_USER_ID }).sort({ createdAt: -1 });
+    // if admin, optionally return all feelings; if user, return only user's feelings
+    if (req.user.role === "admin") {
+      const all = await Feeling.find().sort({ createdAt: -1 });
+      return res.json(all);
+    }
+    const feelings = await Feeling.find({ userId: req.user._id }).sort({ createdAt: -1 });
     res.json(feelings);
   } catch (error) {
     console.error(error);
@@ -27,7 +33,15 @@ export const getFeelings = async (req, res) => {
 
 export const deleteFeeling = async (req, res) => {
   try {
-    await Feeling.findByIdAndDelete(req.params.id);
+    const feeling = await Feeling.findById(req.params.id);
+    if (!feeling) return res.status(404).json({ message: "Not found" });
+
+    // allow delete if owner or admin
+    if (req.user.role !== "admin" && !feeling.userId.equals(req.user._id)) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    await feeling.remove();
     res.json({ message: "Feeling हटाई गई!" });
   } catch (error) {
     console.error(error);

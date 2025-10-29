@@ -7,6 +7,7 @@ import authRoutes from "./routes/authRoutes.js";
 import feelingRoutes from "./routes/feelingRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import safetyRoutes from "./routes/safetyRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js"; // ✅ Added line
 
 dotenv.config();
 const app = express();
@@ -23,6 +24,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/feelings", feelingRoutes); // ✅ Feelings integrated
 app.use("/api/upload", uploadRoutes);
 app.use("/api/safety", safetyRoutes);
+app.use("/api/profile", profileRoutes); // ✅ Added line (Profile API integrated)
 
 // Test Route
 app.get("/", (req, res) => {
