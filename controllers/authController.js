@@ -43,3 +43,57 @@ export const login = async (req, res) => {
     res.status(500).json({ message: "Login failed" });
   }
 };
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password"); // password field exclude
+    res.status(200).json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+};
+// 🟠 UPDATE USER
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, password, role } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Update fields if provided
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (role) user.role = role;
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update user" });
+  }
+};
+
+// 🔴 DELETE USER
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete user" });
+  }
+};

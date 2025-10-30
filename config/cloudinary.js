@@ -1,4 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import multer from "multer";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -8,4 +10,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export default cloudinary;
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "lyf_media",
+    allowed_formats: ["jpg","png","jpeg","webp","mp4","mov","mkv","webm"],
+    resource_type: "auto"
+  }
+});
+
+const upload = multer({ storage });
+
+export { cloudinary, upload };
