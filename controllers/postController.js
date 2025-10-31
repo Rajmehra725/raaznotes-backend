@@ -125,7 +125,7 @@ export const deletePost = async (req, res) => {
     // ✅ Delete post from DB
     await post.deleteOne();
     req.app.get("io")?.emit("post-deleted", { id: req.params.id });
-    res.json({ message: "Post and media deleted successfully" });
+    res.json({ message: "Post and media deleted successfully with raaz" });
   } catch (err) {
     console.error("❌ Delete Post Error:", err);
     res.status(500).json({ message: "Delete failed", error: err.message });
