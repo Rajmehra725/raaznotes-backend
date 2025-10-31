@@ -1,26 +1,28 @@
 import Post from "../models/Post.js";
 import User from "../models/User.js";
+import { cloudinary } from "../config/cloudinary.js";
 
-// create post
 export const createPost = async (req, res) => {
   try {
+    // ✅ Auth check
     if (!req.user || !req.user._id) {
       return res.status(401).json({ message: "Unauthorized: user not found" });
     }
 
     const { content, feelingType } = req.body;
-
-    // ✅ handle file upload
     let mediaUrl = "";
-    if (req.file) {
-      // Local URL — later replace with Cloudinary
-      mediaUrl = `/uploads/${req.file.filename}`;
+
+    // ✅ If file uploaded via multer-storage-cloudinary
+    if (req.file && req.file.path) {
+      // multer-storage-cloudinary automatically gives secure_url in req.file.path
+      mediaUrl = req.file.path;
     }
 
     if (!content && !mediaUrl) {
       return res.status(400).json({ message: "Please add text or media" });
     }
 
+    // ✅ Create post
     const post = await Post.create({
       author: req.user._id,
       content,
@@ -33,16 +35,19 @@ export const createPost = async (req, res) => {
       "name profilePicture role"
     );
 
+    // ✅ Real-time socket emit
     const io = req.app.get("io");
     if (io) io.emit("post-created", populated);
 
     res.status(201).json(populated);
   } catch (err) {
     console.error("❌ Create Post Error:", err);
-    res.status(500).json({ message: "Create post failed", error: err.message });
+    res.status(500).json({
+      message: "Create post failed",
+      error: err.message,
+    });
   }
 };
-
 
 // get feed (all posts)
 export const getFeed = async (req, res) => {
