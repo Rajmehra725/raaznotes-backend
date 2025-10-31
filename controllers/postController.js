@@ -4,20 +4,45 @@ import User from "../models/User.js";
 // create post
 export const createPost = async (req, res) => {
   try {
-    const { content, feelingType, mediaUrl } = req.body;
-    const author = req.user._id;
-    const post = await Post.create({ author, content, feelingType, mediaUrl });
-    // populate for response
-    const populated = await Post.findById(post._id).populate("author", "name profilePicture role");
-    // emit via socket
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Unauthorized: user not found" });
+    }
+
+    const { content, feelingType } = req.body;
+
+    // ✅ handle file upload
+    let mediaUrl = "";
+    if (req.file) {
+      // Local URL — later replace with Cloudinary
+      mediaUrl = `/uploads/${req.file.filename}`;
+    }
+
+    if (!content && !mediaUrl) {
+      return res.status(400).json({ message: "Please add text or media" });
+    }
+
+    const post = await Post.create({
+      author: req.user._id,
+      content,
+      feelingType,
+      mediaUrl,
+    });
+
+    const populated = await Post.findById(post._id).populate(
+      "author",
+      "name profilePicture role"
+    );
+
     const io = req.app.get("io");
-    io.emit("post-created", populated);
-    res.json(populated);
+    if (io) io.emit("post-created", populated);
+
+    res.status(201).json(populated);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Create post failed" });
+    console.error("❌ Create Post Error:", err);
+    res.status(500).json({ message: "Create post failed", error: err.message });
   }
 };
+
 
 // get feed (all posts)
 export const getFeed = async (req, res) => {

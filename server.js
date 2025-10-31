@@ -36,6 +36,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/posts", postRoutes);     // posts/feelings CRUD + real-time
 app.use("/api/stories", storyRoutes); // stories
 app.use("/api/users", userRoutes);     // admin users (GET/DELETE)
+app.use("/uploads", express.static("uploads"));
 
 // Keep old auth-users compatibility (optional)
 app.use("/api/auth/users", userRoutes);
