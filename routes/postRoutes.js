@@ -1,6 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-import upload from "../middleware/uploadMiddleware.js";
+import { upload } from "../config/cloudinary.js";
 import {
   createPost,
   getFeed,
@@ -11,10 +11,10 @@ import {
 
 const router = express.Router();
 
+router.post("/", protect, upload.single("file"), createPost);
 router.get("/", protect, getFeed);
-router.post("/", protect, upload.single("media"), createPost); // ✅ Updated
 router.get("/user/:userId", protect, getPostsByUser);
-router.put("/:id", protect, updatePost);
+router.put("/:id", protect, upload.single("file"), updatePost);
 router.delete("/:id", protect, deletePost);
 
 export default router;

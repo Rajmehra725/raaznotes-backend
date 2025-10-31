@@ -94,18 +94,41 @@ export const updatePost = async (req, res) => {
 };
 
 // delete post
+// delete post (and its Cloudinary media)
 export const deletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // only author or admin
     if (post.author.toString() !== req.user._id.toString() && req.user.role !== "admin") {
       return res.status(403).json({ message: "Not allowed" });
     }
-    await post.remove();
-    req.app.get("io").emit("post-deleted", { id: req.params.id });
-    res.json({ message: "Deleted" });
+
+    // ✅ Delete media from Cloudinary (if exists)
+    if (post.mediaUrl && post.mediaUrl.includes("cloudinary.com")) {
+      try {
+        // Extract public_id from URL
+        const parts = post.mediaUrl.split("/");
+        const lastPart = parts[parts.length - 1];
+        const public_id = lastPart.split(".")[0]; // remove extension
+
+        await cloudinary.uploader.destroy(`lyf_media/${public_id}`, {
+          resource_type: "auto",
+        });
+        console.log("✅ Cloudinary file deleted:", public_id);
+      } catch (cloudErr) {
+        console.error("⚠️ Cloudinary delete failed:", cloudErr.message);
+      }
+    }
+
+    // ✅ Delete post from DB
+    await post.deleteOne();
+    req.app.get("io")?.emit("post-deleted", { id: req.params.id });
+    res.json({ message: "Post and media deleted successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Delete failed" });
+    console.error("❌ Delete Post Error:", err);
+    res.status(500).json({ message: "Delete failed", error: err.message });
   }
 };
+
