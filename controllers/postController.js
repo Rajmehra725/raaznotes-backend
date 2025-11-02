@@ -132,3 +132,79 @@ export const deletePost = async (req, res) => {
   }
 };
 
+export const likePost = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const postId = req.params.id;
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const alreadyLiked = post.likes.some((id) => id.toString() === userId.toString());
+
+    if (alreadyLiked) {
+      // Unlike
+      post.likes = post.likes.filter((id) => id.toString() !== userId.toString());
+    } else {
+      // Like
+      post.likes.push(userId);
+    }
+
+    await post.save();
+
+    // Return populated post (so frontend has author and comments user info)
+    const populated = await Post.findById(post._id)
+      .populate("author", "name profilePicture role")
+      .populate("comments.user", "name profilePicture");
+
+    // Emit via socket if available
+    req.app.get("io")?.emit("post-liked", { postId: post._id, likes: populated.likes });
+
+    res.json(populated);
+  } catch (err) {
+    console.error("Like error:", err);
+    res.status(500).json({ message: "Like operation failed", error: err.message });
+  }
+};
+
+// --- ADD COMMENT ---
+export const addComment = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const postId = req.params.id;
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ message: "Comment text required" });
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const comment = {
+      user: userId,
+      text: text.trim(),
+      createdAt: new Date(),
+    };
+
+    post.comments.push(comment);
+    await post.save();
+
+    // Get the newly added comment populated with user details
+    // We'll find the last comment (it's the one we added)
+    const populatedPost = await Post.findById(post._id)
+      .populate("author", "name profilePicture role")
+      .populate("comments.user", "name profilePicture");
+
+    const newComment = populatedPost.comments[populatedPost.comments.length - 1];
+
+    // Emit socket event
+    req.app.get("io")?.emit("comment-added", { postId: post._id, comment: newComment });
+
+    // Return only the new comment (frontend expects res.data to be appended)
+    res.status(201).json(newComment);
+  } catch (err) {
+    console.error("Add comment error:", err);
+    res.status(500).json({ message: "Add comment failed", error: err.message });
+  }
+};
