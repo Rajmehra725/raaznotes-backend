@@ -1,5 +1,68 @@
 import User from "../models/User.js";
+import { cloudinary } from "../config/cloudinary.js";
 
+// ✅ Update profile (name, bio, social links, avatar, coverPhoto)
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, bio, facebook, instagram, linkedin, github, hackerrank } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Update basic info
+    user.name = name || user.name;
+    user.bio = bio || user.bio;
+    user.socials = {
+      facebook: facebook || user.socials?.facebook || "",
+      instagram: instagram || user.socials?.instagram || "",
+      linkedin: linkedin || user.socials?.linkedin || "",
+      github: github || user.socials?.github || "",
+      hackerrank: hackerrank || user.socials?.hackerrank || "",
+    };
+
+    // 🖼️ Avatar upload
+    if (req.files?.avatar) {
+      // Delete old avatar from Cloudinary if exists
+      if (user.avatar?.includes("cloudinary.com")) {
+        const parts = user.avatar.split("/");
+        const lastPart = parts[parts.length - 1];
+        const public_id = lastPart.split(".")[0];
+        await cloudinary.uploader.destroy(`avatars/${public_id}`, { resource_type: "image" });
+      }
+
+      // Upload new avatar
+      const uploadedAvatar = await cloudinary.uploader.upload(req.files.avatar[0].path, {
+        folder: "avatars",
+        resource_type: "image",
+      });
+      user.avatar = uploadedAvatar.secure_url;
+    }
+
+    // 🖼️ Cover photo upload
+    if (req.files?.coverPhoto) {
+      // Delete old coverPhoto from Cloudinary if exists
+      if (user.coverPhoto?.includes("cloudinary.com")) {
+        const parts = user.coverPhoto.split("/");
+        const lastPart = parts[parts.length - 1];
+        const public_id = lastPart.split(".")[0];
+        await cloudinary.uploader.destroy(`coverPhotos/${public_id}`, { resource_type: "image" });
+      }
+
+      // Upload new coverPhoto
+      const uploadedCover = await cloudinary.uploader.upload(req.files.coverPhoto[0].path, {
+        folder: "coverPhotos",
+        resource_type: "image",
+      });
+      user.coverPhoto = uploadedCover.secure_url;
+    }
+
+    await user.save();
+    res.json({ message: "Profile updated", user });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ message: "Update failed", error: err.message });
+  }
+};
 // 🧾 Get all users (Admin only)
 export const getAllUsers = async (req, res) => {
   try {
@@ -61,29 +124,7 @@ export const getProfile = async (req, res) => {
 };
 
 // ✅ Update profile (name, bio, social links)
-export const updateProfile = async (req, res) => {
-  try {
-    const { name, bio, facebook, instagram, linkedin, github, hackerrank } = req.body;
 
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.name = name || user.name;
-    user.bio = bio || user.bio;
-    user.socials = {
-      facebook: facebook || user.socials?.facebook || "",
-      instagram: instagram || user.socials?.instagram || "",
-      linkedin: linkedin || user.socials?.linkedin || "",
-      github: github || user.socials?.github || "",
-      hackerrank: hackerrank || user.socials?.hackerrank || "",
-    };
-
-    await user.save();
-    res.json({ message: "Profile updated", user });
-  } catch (err) {
-    res.status(500).json({ message: "Update failed", error: err.message });
-  }
-};
 
 // ✅ Update password
 export const updatePassword = async (req, res) => {
