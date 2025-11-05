@@ -1,43 +1,56 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs"; // ✅ must be added here
+import bcrypt from "bcryptjs";
+
 const userSchema = new mongoose.Schema(
   {
-    // Basic Details
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
-    password: { type: String, required: true }, // Hashed password
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
 
-    // Role
-    role: { type: String, enum: ["user", "admin"], default: "user" },
+    // 📸 Profile & Cover Photos
+    avatar: { type: String, default: "" },
+    coverPhoto: { type: String, default: "" },
 
-    // Profile Info
+    // 🧠 Bio
     bio: { type: String, default: "" },
-    location: { type: String, default: "" },
 
-    // Profile Picture (Cloudinary)
-    profilePicture: {
-      url: { type: String, default: "" },
-      public_id: { type: String, default: "" },
-    },
-
-    // Social Links
-    socialLinks: {
+    // 🌐 Social Links
+    socials: {
+      facebook: { type: String, default: "" },
       instagram: { type: String, default: "" },
       linkedin: { type: String, default: "" },
       github: { type: String, default: "" },
+      hackerrank: { type: String, default: "" },
+      youtube: { type: String, default: "" },
+      twitter: { type: String, default: "" },
     },
 
-    // Account Status (Optional but useful for admin)
-    isActive: { type: Boolean, default: true },
+    // 👥 Followers & Following
+    followers: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" } // Users who follow this user
+    ],
+    following: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" } // Users this user follows
+    ],
+
+    // 🧩 Role & Status
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    isBlocked: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
-// ✅ Hash password before saving
+// 🔒 Encrypt password before saving
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
+
+// 🔑 Compare entered password with hashed password
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
 export default mongoose.model("User", userSchema);

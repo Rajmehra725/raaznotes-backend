@@ -12,6 +12,7 @@ import postRoutes from "./routes/postRoutes.js";
 import storyRoutes from "./routes/storyRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import followRoutes from "./routes/followRoutes.js";
 import http from "http";
 import { Server as IOServer } from "socket.io";
 
@@ -37,7 +38,7 @@ app.use("/api/posts", postRoutes);     // posts/feelings CRUD + real-time
 app.use("/api/stories", storyRoutes); // stories
 app.use("/api/users", userRoutes);     // admin users (GET/DELETE)
 app.use("/uploads", express.static("uploads"));
-
+app.use("/api/follow", followRoutes);
 // Keep old auth-users compatibility (optional)
 app.use("/api/auth/users", userRoutes);
 

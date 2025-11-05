@@ -2,27 +2,21 @@ import Post from "../models/Post.js";
 import User from "../models/User.js";
 import { cloudinary } from "../config/cloudinary.js";
 
+/* --------------------------------------------------------
+   ✅ CREATE POST
+-------------------------------------------------------- */
 export const createPost = async (req, res) => {
   try {
-    // ✅ Auth check
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ message: "Unauthorized: user not found" });
-    }
+    if (!req.user?._id) return res.status(401).json({ message: "Unauthorized" });
 
     const { content, feelingType } = req.body;
     let mediaUrl = "";
 
-    // ✅ If file uploaded via multer-storage-cloudinary
-    if (req.file && req.file.path) {
-      // multer-storage-cloudinary automatically gives secure_url in req.file.path
-      mediaUrl = req.file.path;
-    }
+    if (req.file?.path) mediaUrl = req.file.path;
 
-    if (!content && !mediaUrl) {
+    if (!content && !mediaUrl)
       return res.status(400).json({ message: "Please add text or media" });
-    }
 
-    // ✅ Create post
     const post = await Post.create({
       author: req.user._id,
       content,
@@ -30,29 +24,27 @@ export const createPost = async (req, res) => {
       mediaUrl,
     });
 
-    const populated = await Post.findById(post._id).populate(
-      "author",
-      "name profilePicture role"
-    );
+    const populated = await Post.findById(post._id)
+      .populate("author", "name profilePicture role")
+      .populate("comments.user", "name profilePicture");
 
-    // ✅ Real-time socket emit
-    const io = req.app.get("io");
-    if (io) io.emit("post-created", populated);
-
+    req.app.get("io")?.emit("post-created", populated);
     res.status(201).json(populated);
   } catch (err) {
     console.error("❌ Create Post Error:", err);
-    res.status(500).json({
-      message: "Create post failed",
-      error: err.message,
-    });
+    res.status(500).json({ message: "Create post failed", error: err.message });
   }
 };
 
-// get feed (all posts)
+/* --------------------------------------------------------
+   ✅ GET FEED
+-------------------------------------------------------- */
 export const getFeed = async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 }).populate("author", "name profilePicture role");
+    const posts = await Post.find()
+      .sort({ createdAt: -1 })
+      .populate("author", "name profilePicture role")
+      .populate("comments.user", "name profilePicture");
     res.json(posts);
   } catch (err) {
     console.error(err);
@@ -60,10 +52,15 @@ export const getFeed = async (req, res) => {
   }
 };
 
-// get posts by user
+/* --------------------------------------------------------
+   ✅ GET POSTS BY USER
+-------------------------------------------------------- */
 export const getPostsByUser = async (req, res) => {
   try {
-    const posts = await Post.find({ author: req.params.userId }).sort({ createdAt: -1 }).populate("author", "name profilePicture role");
+    const posts = await Post.find({ author: req.params.userId })
+      .sort({ createdAt: -1 })
+      .populate("author", "name profilePicture role")
+      .populate("comments.user", "name profilePicture");
     res.json(posts);
   } catch (err) {
     console.error(err);
@@ -71,21 +68,31 @@ export const getPostsByUser = async (req, res) => {
   }
 };
 
-// update post (author or admin)
+/* --------------------------------------------------------
+   ✅ UPDATE POST
+-------------------------------------------------------- */
 export const updatePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
-    // only author or admin
-    if (post.author.toString() !== req.user._id.toString() && req.user.role !== "admin") {
+
+    if (
+      post.author.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ message: "Not allowed" });
     }
+
     post.content = req.body.content ?? post.content;
     post.mediaUrl = req.body.mediaUrl ?? post.mediaUrl;
     post.feelingType = req.body.feelingType ?? post.feelingType;
+
     await post.save();
-    const populated = await Post.findById(post._id).populate("author","name profilePicture role");
-    req.app.get("io").emit("post-updated", populated);
+    const populated = await Post.findById(post._id)
+      .populate("author", "name profilePicture role")
+      .populate("comments.user", "name profilePicture");
+
+    req.app.get("io")?.emit("post-updated", populated);
     res.json(populated);
   } catch (err) {
     console.error(err);
@@ -93,118 +100,129 @@ export const updatePost = async (req, res) => {
   }
 };
 
-// delete post
-// delete post (and its Cloudinary media)
+/* --------------------------------------------------------
+   ✅ DELETE POST (+ Cloudinary media)
+-------------------------------------------------------- */
 export const deletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    // only author or admin
-    if (post.author.toString() !== req.user._id.toString() && req.user.role !== "admin") {
+    if (
+      post.author.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ message: "Not allowed" });
     }
 
-    // ✅ Delete media from Cloudinary (if exists)
-    if (post.mediaUrl && post.mediaUrl.includes("cloudinary.com")) {
+    // Delete media from Cloudinary (if exists)
+    if (post.mediaUrl?.includes("cloudinary.com")) {
       try {
-        // Extract public_id from URL
         const parts = post.mediaUrl.split("/");
         const lastPart = parts[parts.length - 1];
-        const public_id = lastPart.split(".")[0]; // remove extension
-
+        const public_id = lastPart.split(".")[0];
         await cloudinary.uploader.destroy(`lyf_media/${public_id}`, {
           resource_type: "auto",
         });
-        console.log("✅ Cloudinary file deleted:", public_id);
       } catch (cloudErr) {
         console.error("⚠️ Cloudinary delete failed:", cloudErr.message);
       }
     }
 
-    // ✅ Delete post from DB
     await post.deleteOne();
     req.app.get("io")?.emit("post-deleted", { id: req.params.id });
-    res.json({ message: "Post and media deleted successfully with raaz" });
+    res.json({ message: "Post deleted successfully" });
   } catch (err) {
     console.error("❌ Delete Post Error:", err);
     res.status(500).json({ message: "Delete failed", error: err.message });
   }
 };
 
+/* --------------------------------------------------------
+   ❤️ LIKE / UNLIKE POST
+-------------------------------------------------------- */
 export const likePost = async (req, res) => {
   try {
     const userId = req.user?._id;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
-    const postId = req.params.id;
-    const post = await Post.findById(postId);
+    const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const alreadyLiked = post.likes.some((id) => id.toString() === userId.toString());
-
-    if (alreadyLiked) {
-      // Unlike
-      post.likes = post.likes.filter((id) => id.toString() !== userId.toString());
-    } else {
-      // Like
-      post.likes.push(userId);
-    }
+    const alreadyLiked = post.likes.includes(userId);
+    post.likes = alreadyLiked
+      ? post.likes.filter((id) => id.toString() !== userId.toString())
+      : [...post.likes, userId];
 
     await post.save();
-
-    // Return populated post (so frontend has author and comments user info)
     const populated = await Post.findById(post._id)
       .populate("author", "name profilePicture role")
       .populate("comments.user", "name profilePicture");
 
-    // Emit via socket if available
-    req.app.get("io")?.emit("post-liked", { postId: post._id, likes: populated.likes });
+    req.app
+      .get("io")
+      ?.emit("post-liked", { postId: post._id, likes: populated.likes });
 
     res.json(populated);
   } catch (err) {
     console.error("Like error:", err);
-    res.status(500).json({ message: "Like operation failed", error: err.message });
+    res.status(500).json({ message: "Like operation failed" });
   }
 };
 
-// --- ADD COMMENT ---
+/* --------------------------------------------------------
+   💬 ADD COMMENT
+-------------------------------------------------------- */
 export const addComment = async (req, res) => {
   try {
     const userId = req.user?._id;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
-    const postId = req.params.id;
     const { text } = req.body;
-    if (!text || !text.trim()) return res.status(400).json({ message: "Comment text required" });
+    if (!text?.trim()) return res.status(400).json({ message: "Comment required" });
 
-    const post = await Post.findById(postId);
+    const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const comment = {
-      user: userId,
-      text: text.trim(),
-      createdAt: new Date(),
-    };
-
+    const comment = { user: userId, text: text.trim(), createdAt: new Date() };
     post.comments.push(comment);
     await post.save();
 
-    // Get the newly added comment populated with user details
-    // We'll find the last comment (it's the one we added)
-    const populatedPost = await Post.findById(post._id)
-      .populate("author", "name profilePicture role")
-      .populate("comments.user", "name profilePicture");
-
+    const populatedPost = await Post.findById(post._id).populate("comments.user", "name profilePicture");
     const newComment = populatedPost.comments[populatedPost.comments.length - 1];
 
-    // Emit socket event
     req.app.get("io")?.emit("comment-added", { postId: post._id, comment: newComment });
-
-    // Return only the new comment (frontend expects res.data to be appended)
     res.status(201).json(newComment);
   } catch (err) {
     console.error("Add comment error:", err);
-    res.status(500).json({ message: "Add comment failed", error: err.message });
+    res.status(500).json({ message: "Add comment failed" });
+  }
+};
+
+/* --------------------------------------------------------
+   ❌ DELETE COMMENT (NEWLY ADDED)
+-------------------------------------------------------- */
+export const deleteComment = async (req, res) => {
+  try {
+    const { postId, commentId } = req.params;
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    // Only author of comment or post author can delete
+    if (
+      comment.user.toString() !== req.user._id.toString() &&
+      post.author.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    comment.deleteOne();
+    await post.save();
+
+    req.app.get("io")?.emit("comment-deleted", { postId, commentId });
+    res.json({ message: "Comment deleted" });
+  } catch (err) {
+    console.error("Delete comment error:", err);
+    res.status(500).json({ message: "Delete comment failed" });
   }
 };

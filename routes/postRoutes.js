@@ -9,21 +9,21 @@ import {
   deletePost,
   likePost,
   addComment,
+  deleteComment,
 } from "../controllers/postController.js";
 
 const router = express.Router();
 
-// create, read, update, delete (existing)
+// CRUD
 router.post("/", protect, upload.single("file"), createPost);
 router.get("/", protect, getFeed);
 router.get("/user/:userId", protect, getPostsByUser);
 router.put("/:id", protect, upload.single("file"), updatePost);
 router.delete("/:id", protect, deletePost);
 
-// NEW: like toggle
+// Like & Comment
 router.put("/:id/like", protect, likePost);
-
-// NEW: add comment
 router.post("/:id/comments", protect, addComment);
+router.delete("/:postId/comments/:commentId", protect, deleteComment);
 
 export default router;

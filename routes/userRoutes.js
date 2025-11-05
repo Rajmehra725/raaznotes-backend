@@ -1,31 +1,47 @@
 import express from "express";
-import User from "../models/User.js";
+import {
+  getAllUsers,
+  deleteUser,
+  changeUserRole,
+  toggleBlockUser,
+  getProfile,
+  updateProfile,
+  updatePassword,
+} from "../controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { upload } from "../config/cloudinary.js"; // For avatar/cover upload
 
 const router = express.Router();
 
-// admin-only middleware
+// ✅ Admin-only middleware
 const requireAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== "admin") return res.status(403).json({ message: "Admin only" });
+  if (!req.user || req.user.role !== "admin")
+    return res.status(403).json({ message: "Admin access only" });
   next();
 };
 
-router.get("/", protect, requireAdmin, async (req, res) => {
-  try {
-    const users = await User.find().select("-password");
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ message: "Fetch users failed" });
-  }
-});
+// 🔹 ADMIN ROUTES
+router.get("/", protect, requireAdmin, getAllUsers);
+router.delete("/:id", protect, requireAdmin, deleteUser);
+router.put("/:id/role", protect, requireAdmin, changeUserRole);
+router.put("/:id/block", protect, requireAdmin, toggleBlockUser);
 
-router.delete("/:id", protect, requireAdmin, async (req, res) => {
-  try {
-    await User.findByIdAndDelete(req.params.id);
-    res.json({ message: "User deleted" });
-  } catch (err) {
-    res.status(500).json({ message: "Delete failed" });
-  }
-});
+// 🔹 USER SETTINGS ROUTES
+// ✅ Get own profile
+router.get("/me", protect, getProfile);
+
+// ✅ Update profile (bio, socials, avatar, cover)
+router.put(
+  "/me",
+  protect,
+  upload.fields([
+    { name: "avatar", maxCount: 1 },
+    { name: "coverPhoto", maxCount: 1 },
+  ]),
+  updateProfile
+);
+
+// ✅ Update password
+router.put("/me/password", protect, updatePassword);
 
 export default router;
