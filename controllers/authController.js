@@ -106,3 +106,80 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Failed to delete user" });
   }
 };
+// 👤 GET USER PROFILE (Public)
+export const getUserProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id)
+      .select("-password")
+      .populate("followers", "name avatar")
+      .populate("following", "name avatar");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json(user);
+  } catch (err) {
+    console.error("Profile fetch error:", err);
+    res.status(500).json({ message: "Failed to fetch user profile" });
+  }
+};
+
+// ➕ FOLLOW USER
+export const followUser = async (req, res) => {
+  try {
+    const { id } = req.params; // jis user ko follow karna hai
+    const currentUserId = req.user.id;
+
+    if (id === currentUserId)
+      return res.status(400).json({ message: "You cannot follow yourself" });
+
+    const targetUser = await User.findById(id);
+    const currentUser = await User.findById(currentUserId);
+
+    if (!targetUser || !currentUser)
+      return res.status(404).json({ message: "User not found" });
+
+    if (targetUser.followers.includes(currentUserId))
+      return res.status(400).json({ message: "Already following" });
+
+    targetUser.followers.push(currentUserId);
+    currentUser.following.push(id);
+
+    await targetUser.save();
+    await currentUser.save();
+
+    res.status(200).json({ message: "User followed successfully" });
+  } catch (err) {
+    console.error("Follow error:", err);
+    res.status(500).json({ message: "Failed to follow user" });
+  }
+};
+
+// ➖ UNFOLLOW USER
+export const unfollowUser = async (req, res) => {
+  try {
+    const { id } = req.params; // jis user ko unfollow karna hai
+    const currentUserId = req.user.id;
+
+    const targetUser = await User.findById(id);
+    const currentUser = await User.findById(currentUserId);
+
+    if (!targetUser || !currentUser)
+      return res.status(404).json({ message: "User not found" });
+
+    targetUser.followers = targetUser.followers.filter(
+      (followerId) => followerId.toString() !== currentUserId
+    );
+    currentUser.following = currentUser.following.filter(
+      (followingId) => followingId.toString() !== id
+    );
+
+    await targetUser.save();
+    await currentUser.save();
+
+    res.status(200).json({ message: "User unfollowed successfully" });
+  } catch (err) {
+    console.error("Unfollow error:", err);
+    res.status(500).json({ message: "Failed to unfollow user" });
+  }
+};

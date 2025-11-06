@@ -5,6 +5,9 @@ import {
   getAllUsers,
   updateUser,
   deleteUser,
+  getUserProfile,
+  followUser,
+  unfollowUser,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/protect.js";
 
@@ -18,5 +21,7 @@ router.post("/login", login);
 router.get("/users", protect, getAllUsers);
 router.put("/users/:id", protect, updateUser);
 router.delete("/users/:id", protect, deleteUser);
-
+router.get("/users/:id/profile", protect, getUserProfile);
+router.post("/users/:id/follow", protect, followUser);
+router.post("/users/:id/unfollow", protect, unfollowUser);
 export default router;
