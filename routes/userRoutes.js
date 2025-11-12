@@ -7,30 +7,33 @@ import {
   getProfile,
   updateProfile,
   updatePassword,
+  toggleFollow,
+  getUserByUsername,
+  toggleVerified,
+  getSuggestedUsers,
 } from "../controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
-import { upload } from "../config/cloudinary.js"; // For avatar/cover upload
+import { upload } from "../config/cloudinary.js";
 
 const router = express.Router();
 
-// ✅ Admin-only middleware
+// 🔹 Admin-only middleware
 const requireAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== "admin")
+  if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ message: "Admin access only" });
+  }
   next();
 };
 
-// 🔹 ADMIN ROUTES
+// ADMIN ROUTES
 router.get("/", protect, requireAdmin, getAllUsers);
 router.delete("/:id", protect, requireAdmin, deleteUser);
 router.put("/:id/role", protect, requireAdmin, changeUserRole);
 router.put("/:id/block", protect, requireAdmin, toggleBlockUser);
+router.put("/:id/verify", protect, requireAdmin, toggleVerified);
 
-// 🔹 USER SETTINGS ROUTES
-// ✅ Get own profile
+// USER ROUTES
 router.get("/me", protect, getProfile);
-
-// ✅ Update profile (bio, socials, avatar, cover)
 router.put(
   "/me",
   protect,
@@ -40,8 +43,13 @@ router.put(
   ]),
   updateProfile
 );
-
-// ✅ Update password
 router.put("/me/password", protect, updatePassword);
 
-export default router;
+// FOLLOW SYSTEM
+router.put("/:id/follow", protect, toggleFollow);
+
+// SUGGESTIONS + PUBLIC PROFILE
+router.get("/suggestions", protect, getSuggestedUsers);
+router.get("/username/:username", getUserByUsername);
+
+export default router; // ✅ This line is required!
