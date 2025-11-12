@@ -43,14 +43,15 @@ export const getFeed = async (req, res) => {
   try {
     const posts = await Post.find()
       .sort({ createdAt: -1 })
-      .populate("author", "name profilePicture role")
-      .populate("comments.user", "name profilePicture");
+      .populate("author", "name avatar role")
+      .populate("comments.user", "name avatar");
     res.json(posts);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Fetch feed failed" });
+    res.status(500).json({ message: "Fetch feed failed in" });
   }
 };
+
 
 /* --------------------------------------------------------
    ✅ GET POSTS BY USER
