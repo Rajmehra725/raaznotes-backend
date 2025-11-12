@@ -23,10 +23,10 @@ export const createPost = async (req, res) => {
       feelingType,
       mediaUrl,
     });
+const populated = await Post.findById(post._id)
+  .populate("author", "name avatar role")
+  .populate("comments.user", "name avatar");
 
-    const populated = await Post.findById(post._id)
-      .populate("author", "name profilePicture role")
-      .populate("comments.user", "name profilePicture");
 
     req.app.get("io")?.emit("post-created", populated);
     res.status(201).json(populated);
