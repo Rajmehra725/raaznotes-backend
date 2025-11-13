@@ -7,7 +7,7 @@ const newsSchema = new mongoose.Schema({
   location: String,
   category: String,
   tags: [String],
-  author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   comments: [
     {

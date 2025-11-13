@@ -75,16 +75,18 @@ export const deleteNews = async (req, res) => {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).json({ message: "News not found" });
 
+    // ✅ Only the author can delete
     if (news.author.toString() !== req.user._id.toString())
-      return res.status(403).json({ message: "Not authorized" });
+      return res.status(403).json({ message: "Not authorized to delete this news" });
 
     await news.remove();
-    res.json({ message: "News deleted" });
+    res.json({ message: "News deleted successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("DELETE NEWS ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // ✅ Like / Unlike
 export const toggleLike = async (req, res) => {
