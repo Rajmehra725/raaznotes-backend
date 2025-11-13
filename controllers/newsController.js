@@ -1,6 +1,34 @@
 import News from "../models/News.js";
-import cloudinary from "../config/cloudinary.js"; // Cloudinary config
-import streamifier from "streamifier";
+
+// ✅ Create News
+export const createNews = async (req, res) => {
+  try {
+    const { title, description, location, category, tags } = req.body;
+
+    // Debug logs
+    console.log("REQ.BODY:", req.body);
+    console.log("REQ.FILE:", req.file);
+
+    if (!title || !description) {
+      return res.status(400).json({ message: "Title and description are required" });
+    }
+
+    const news = await News.create({
+      title,
+      description,
+      location: location || "",
+      category: category || "",
+      tags: tags ? tags.split(",").map(t => t.trim()) : [],
+      imageUrl: req.file?.path || "",
+      author: req.user._id
+    });
+
+    res.status(201).json(news);
+  } catch (err) {
+    console.error("CREATE NEWS ERROR:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
 
 // ✅ Get all news
 export const getAllNews = async (req, res) => {
@@ -15,54 +43,12 @@ export const getAllNews = async (req, res) => {
   }
 };
 
-// ✅ Helper: Upload file buffer to Cloudinary
-const uploadToCloudinary = async (fileBuffer) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: "news_images" },
-      (error, result) => {
-        if (result) resolve(result.secure_url);
-        else reject(error);
-      }
-    );
-    streamifier.createReadStream(fileBuffer).pipe(stream);
-  });
-};
-
-// ✅ Create news
-export const createNews = async (req, res) => {
-  try {
-    const { title, description, location, category, tags } = req.body;
-    let imageUrl = "";
-
-    if (req.file) {
-      imageUrl = await uploadToCloudinary(req.file.buffer);
-    }
-
-    const news = await News.create({
-      title,
-      description,
-      location,
-      category,
-      tags: tags ? tags.split(",").map(t => t.trim()) : [],
-      imageUrl,
-      author: req.user._id,
-    });
-
-    res.status(201).json(news);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// ✅ Update news
+// ✅ Update News
 export const updateNews = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).json({ message: "News not found" });
 
-    // Only author can update
     if (news.author.toString() !== req.user._id.toString())
       return res.status(403).json({ message: "Not authorized" });
 
@@ -73,10 +59,7 @@ export const updateNews = async (req, res) => {
     news.location = location || news.location;
     news.category = category || news.category;
     news.tags = tags ? tags.split(",").map(t => t.trim()) : news.tags;
-
-    if (req.file) {
-      news.imageUrl = await uploadToCloudinary(req.file.buffer);
-    }
+    news.imageUrl = req.file?.path || news.imageUrl;
 
     await news.save();
     res.json(news);
@@ -86,7 +69,7 @@ export const updateNews = async (req, res) => {
   }
 };
 
-// ✅ Delete news
+// ✅ Delete News
 export const deleteNews = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
@@ -103,17 +86,17 @@ export const deleteNews = async (req, res) => {
   }
 };
 
-// ✅ Like / Unlike news
+// ✅ Like / Unlike
 export const toggleLike = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).json({ message: "News not found" });
 
-    const userId = req.user?._id?.toString();
+    const userId = req.user?._id.toString();
     if (!news.likes) news.likes = [];
 
     if (userId && news.likes.includes(userId)) {
-      news.likes = news.likes.filter(id => id !== userId); // unlike
+      news.likes = news.likes.filter(id => id !== userId);
     } else if (userId) {
       news.likes.push(userId);
     }
@@ -126,19 +109,19 @@ export const toggleLike = async (req, res) => {
   }
 };
 
-// ✅ Add comment
+// ✅ Add Comment
 export const addComment = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
     if (!news) return res.status(404).json({ message: "News not found" });
 
     const comment = {
-      user: req.user?._id || null, // optional for public
+      user: req.user?._id || null,
       comment: req.body.comment,
       createdAt: new Date(),
     };
 
-    if (!news.comments) news.comments = [];
+    news.comments = news.comments || [];
     news.comments.push(comment);
 
     await news.save();
@@ -149,7 +132,7 @@ export const addComment = async (req, res) => {
   }
 };
 
-// ✅ Share news
+// ✅ Share News
 export const shareNews = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
@@ -157,7 +140,6 @@ export const shareNews = async (req, res) => {
 
     news.shareCount = news.shareCount ? news.shareCount + 1 : 1;
     await news.save();
-
     res.json(news);
   } catch (err) {
     console.error(err);
