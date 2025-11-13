@@ -183,3 +183,23 @@ export const unfollowUser = async (req, res) => {
     res.status(500).json({ message: "Failed to unfollow user" });
   }
 };
+// In userController.js
+export const verifyToken = async (req, res) => {
+  try {
+    // req.user comes from auth middleware
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    res.status(200).json({
+      message: "Token valid",
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Token verification error:", err);
+    res.status(500).json({ message: "Token verification failed" });
+  }
+};

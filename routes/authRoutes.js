@@ -8,6 +8,7 @@ import {
   getUserProfile,
   followUser,
   unfollowUser,
+   verifyToken
 } from "../controllers/authController.js";
 import { protect } from "../middleware/protect.js";
 
@@ -16,7 +17,7 @@ const router = express.Router();
 // Public
 router.post("/register", register);
 router.post("/login", login);
-
+router.get("/verify", protect, verifyToken);
 // Protected (requires token)
 router.get("/users", protect, getAllUsers);
 router.put("/users/:id", protect, updateUser);

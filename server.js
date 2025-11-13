@@ -16,7 +16,7 @@ import followRoutes from "./routes/followRoutes.js";
 import http from "http";
 import { Server as IOServer } from "socket.io";
 import chatRoutes from "./routes/chatRoutes.js";
-
+import newsRoutes from "./routes/newsRoutes.js";
 dotenv.config();
 const app = express();
 
@@ -42,7 +42,7 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api/follow", followRoutes);
 app.use("/api/auth/users", userRoutes);
 app.use("/api/chat", chatRoutes);
-
+app.use("/api/news", newsRoutes);
 // Test Route
 app.get("/", (req, res) => {
   res.send("LYF Backend API is Running...");
