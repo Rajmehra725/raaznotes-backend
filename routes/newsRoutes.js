@@ -1,5 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
+import upload from "../middleware/uploadMiddleware.js"; // multer middleware
 import {
   getAllNews,
   createNews,
@@ -12,15 +13,27 @@ import {
 
 const router = express.Router();
 
-// CRUD
+// ---------------- CRUD ----------------
+// Get all news
 router.get("/", getAllNews);
-router.post("/", protect, createNews);     // ✅ use protect
-router.put("/:id", protect, updateNews);
+
+// Create news (with optional image)
+router.post("/", protect, upload.single("image"), createNews);
+
+// Update news (with optional image)
+router.put("/:id", protect, upload.single("image"), updateNews);
+
+// Delete news
 router.delete("/:id", protect, deleteNews);
 
-// Interactions
+// ---------------- Interactions ----------------
+// Like / Unlike
 router.put("/:id/like", protect, toggleLike);
+
+// Comment
 router.post("/:id/comment", protect, addComment);
+
+// Share
 router.put("/:id/share", protect, shareNews);
 
 export default router;

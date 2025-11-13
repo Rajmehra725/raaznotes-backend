@@ -1,116 +1,166 @@
-const News = require("../models/News");
+import News from "../models/News.js";
+import cloudinary from "../config/cloudinary.js"; // Cloudinary config
+import streamifier from "streamifier";
 
-// Get all news
-exports.getAllNews = async (req, res) => {
+// ✅ Get all news
+export const getAllNews = async (req, res) => {
   try {
     const news = await News.find()
-      .populate("author", "name")
-      .populate("comments.user", "name")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .populate("author", "name email");
     res.json(news);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Create news
-exports.createNews = async (req, res) => {
-  const { title, description, imageUrl, location, category, tags } = req.body;
+// ✅ Helper: Upload file buffer to Cloudinary
+const uploadToCloudinary = async (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "news_images" },
+      (error, result) => {
+        if (result) resolve(result.secure_url);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(fileBuffer).pipe(stream);
+  });
+};
+
+// ✅ Create news
+export const createNews = async (req, res) => {
   try {
-    const news = new News({
+    const { title, description, location, category, tags } = req.body;
+    let imageUrl = "";
+
+    if (req.file) {
+      imageUrl = await uploadToCloudinary(req.file.buffer);
+    }
+
+    const news = await News.create({
       title,
       description,
-      imageUrl,
       location,
       category,
-      tags,
-      author: req.user._id
+      tags: tags ? tags.split(",").map(t => t.trim()) : [],
+      imageUrl,
+      author: req.user._id,
     });
-    await news.save();
-    await news.populate("author", "name");
+
     res.status(201).json(news);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Update news
-exports.updateNews = async (req, res) => {
+// ✅ Update news
+export const updateNews = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).json({ error: "News not found" });
+    if (!news) return res.status(404).json({ message: "News not found" });
 
-    if (news.author.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "Not authorized" });
+    // Only author can update
+    if (news.author.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: "Not authorized" });
+
+    const { title, description, location, category, tags } = req.body;
+
+    news.title = title || news.title;
+    news.description = description || news.description;
+    news.location = location || news.location;
+    news.category = category || news.category;
+    news.tags = tags ? tags.split(",").map(t => t.trim()) : news.tags;
+
+    if (req.file) {
+      news.imageUrl = await uploadToCloudinary(req.file.buffer);
     }
 
-    Object.assign(news, req.body, { updatedAt: new Date() });
     await news.save();
     res.json(news);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Delete news
-exports.deleteNews = async (req, res) => {
+// ✅ Delete news
+export const deleteNews = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).json({ error: "News not found" });
+    if (!news) return res.status(404).json({ message: "News not found" });
 
-    if (news.author.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
+    if (news.author.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: "Not authorized" });
 
     await news.remove();
     res.json({ message: "News deleted" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Like / Unlike
-exports.toggleLike = async (req, res) => {
+// ✅ Like / Unlike news
+export const toggleLike = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).json({ error: "News not found" });
+    if (!news) return res.status(404).json({ message: "News not found" });
 
-    const index = news.likes.indexOf(req.user._id);
-    if (index === -1) news.likes.push(req.user._id);
-    else news.likes.splice(index, 1);
+    const userId = req.user?._id?.toString();
+    if (!news.likes) news.likes = [];
+
+    if (userId && news.likes.includes(userId)) {
+      news.likes = news.likes.filter(id => id !== userId); // unlike
+    } else if (userId) {
+      news.likes.push(userId);
+    }
 
     await news.save();
     res.json(news);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Add comment
-exports.addComment = async (req, res) => {
+// ✅ Add comment
+export const addComment = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).json({ error: "News not found" });
+    if (!news) return res.status(404).json({ message: "News not found" });
 
-    news.comments.push({ user: req.user._id, comment: req.body.comment });
+    const comment = {
+      user: req.user?._id || null, // optional for public
+      comment: req.body.comment,
+      createdAt: new Date(),
+    };
+
+    if (!news.comments) news.comments = [];
+    news.comments.push(comment);
+
     await news.save();
-    await news.populate("comments.user", "name");
     res.json(news);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Share news (increment share count)
-exports.shareNews = async (req, res) => {
+// ✅ Share news
+export const shareNews = async (req, res) => {
   try {
     const news = await News.findById(req.params.id);
-    if (!news) return res.status(404).json({ error: "News not found" });
+    if (!news) return res.status(404).json({ message: "News not found" });
 
-    news.shareCount += 1;
+    news.shareCount = news.shareCount ? news.shareCount + 1 : 1;
     await news.save();
+
     res.json(news);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
