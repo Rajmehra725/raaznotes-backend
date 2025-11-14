@@ -7,9 +7,13 @@ export const createBooking = async (req, res) => {
 
     const product = await Product.findById(productId);
 
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
     const booking = await Booking.create({
       productId,
-      sellerId: product.userId,
+      sellerId: product.seller,  // ✔ correct field
       buyerId: req.user._id,
       quantity
     });
@@ -19,6 +23,7 @@ export const createBooking = async (req, res) => {
     res.status(500).json({ error: "Booking failed" });
   }
 };
+
 
 export const getMyBookings = async (req, res) => {
   const bookings = await Booking.find({ buyerId: req.user._id }).populate("productId");
