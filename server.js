@@ -17,6 +17,7 @@ import http from "http";
 import { Server as IOServer } from "socket.io";
 import chatRoutes from "./routes/chatRoutes.js";
 import newsRoutes from "./routes/newsRoutes.js";
+
 dotenv.config();
 const app = express();
 
@@ -27,6 +28,13 @@ app.use(express.json());
 // Connect to MongoDB
 connectDB();
 
+// ==========================
+// ⭐ NEW IMPORTS (E-Commerce)
+// ==========================
+import productRoutes from "./routes/productRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
+import orderRoutes from "./routes/bookingRoutes.js";
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/feelings", feelingRoutes);
@@ -34,6 +42,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/safety", safetyRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/admin", adminRoutes);
+
 // newly added route groups
 app.use("/api/posts", postRoutes);
 app.use("/api/stories", storyRoutes);
@@ -43,6 +52,14 @@ app.use("/api/follow", followRoutes);
 app.use("/api/auth/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/news", newsRoutes);
+
+// ==========================
+// ⭐ NEW ROUTES (E-Commerce)
+// ==========================
+app.use("/api/products", productRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/orders", orderRoutes);
+
 // Test Route
 app.get("/", (req, res) => {
   res.send("LYF Backend API is Running...");
