@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import slugify from "slugify";
 
 const productSchema = new mongoose.Schema(
   {
@@ -8,13 +9,12 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
-   slug: {
-  type: String,
-  unique: true,
-  lowercase: true,
-  index: true,
-}
-,
+    slug: {
+      type: String,
+      unique: true,
+      lowercase: true,
+      index: true,
+    },
 
     description: {
       type: String,
@@ -26,20 +26,22 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
- category: {
-  type: String,
-  required: true,
-  index: true,
-},
+    category: {
+      type: String,
+      required: true,
+      index: true,
+    },
 
     stock: {
       type: Number,
       default: 1,
     },
 
+    // 🔥 MULTIPLE IMAGES SUPPORTED (Cloudinary URLs)
     images: [
       {
-        type: String, // cloudinary URLs
+        type: String,
+        required: false,
       },
     ],
 
@@ -61,10 +63,19 @@ const productSchema = new mongoose.Schema(
 
     isActive: {
       type: Boolean,
-      default: true, // soft delete / hide
+      default: true,
     },
   },
   { timestamps: true }
 );
+
+
+// 🔥 AUTO-SLUG GENERATION (Example: "Red T-Shirt" → "red-t-shirt")
+productSchema.pre("save", function (next) {
+  if (!this.isModified("name")) return next();
+  this.slug = slugify(this.name, { lower: true });
+  next();
+});
+
 
 export default mongoose.model("Product", productSchema);

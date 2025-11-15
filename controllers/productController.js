@@ -6,35 +6,49 @@ import slugify from "slugify";
 // -----------------------------------------------
 export const createProduct = async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      price,
-      category,
-      stock,
-      images,
-    } = req.body;
-
-    const slug = slugify(name, { lower: true });
+    const imageUrls = req.files?.map(f => f.path) || [];
 
     const product = await Product.create({
-      name,
-      slug,
-      description,
-      price,
-      category,
-      stock,
-      images,
-      seller: req.user._id, // FIXED
+      name: req.body.name,
+      price: req.body.price,
+      description: req.body.description,
+      seller: req.user._id,
+      images: imageUrls
     });
 
-    res.json({ success: true, product });
+    res.json(product);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Product create failed" });
   }
 };
 
+export const updateProduct = async (req, res) => {
+  try {
+    // new images from frontend
+    const newImages = req.files?.map(f => f.path) || [];
 
+    // old images array from frontend
+    let oldImages = [];
+    if (req.body.oldImages) {
+      oldImages = JSON.parse(req.body.oldImages);
+    }
+
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      {
+        name: req.body.name,
+        price: req.body.price,
+        description: req.body.description,
+        images: [...oldImages, ...newImages].slice(0, 5) // max 5
+      },
+      { new: true }
+    );
+
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Update failed" });
+  }
+};
 // -----------------------------------------------
 // GET ALL PRODUCTS (Search + Filter + Sort + Pagination)
 // -----------------------------------------------
@@ -113,37 +127,6 @@ export const getSingleProduct = async (req, res) => {
     res.status(500).json({ error: "Invalid product ID" });
   }
 };
-
-
-// -----------------------------------------------
-// UPDATE PRODUCT (Only seller can update)
-// -----------------------------------------------
-export const updateProduct = async (req, res) => {
-  try {
-    const updates = req.body;
-
-    // Fix slug update
-    if (updates.name) {
-      updates.slug = slugify(updates.name, { lower: true });
-    }
-
-    // Seller check FIXED
-    const product = await Product.findOneAndUpdate(
-      { _id: req.params.id, seller: req.user._id },
-      updates,
-      { new: true }
-    );
-
-    if (!product)
-      return res.status(403).json({ error: "Unauthorized or product not found" });
-
-    res.json({ success: true, product });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
 
 // -----------------------------------------------
 // SOFT DELETE PRODUCT (Seller hide)
