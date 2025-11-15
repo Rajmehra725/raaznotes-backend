@@ -1,4 +1,10 @@
 import express from "express";
+import { protect } from "../middleware/authMiddleware.js";
+
+import {
+  uploadMultiple   // <-- Yahi sahi wala middleware
+} from "../config/cloudinary.js";
+
 import {
   createProduct,
   getAllProducts,
@@ -8,35 +14,23 @@ import {
   adminDeleteProduct,
 } from "../controllers/productController.js";
 
-import { protect, admin } from "../middleware/authMiddleware.js";
-import { upload } from "../config/cloudinary.js"; // multer + cloudinary
-
 const router = express.Router();
 
-// =====================================
-// 🔹 USER / SELLER ROUTES
-// =====================================
+// CREATE PRODUCT
+router.post("/create", protect, uploadMultiple, createProduct);
 
-// Create product with multiple images
-router.post("/create", protect, upload.array("images", 10), createProduct);
-
-// Get all products
+// GET ALL
 router.get("/", getAllProducts);
 
-// Get single product
+// GET SINGLE
 router.get("/:id", getSingleProduct);
 
-// Update product (seller only) with optional image upload
-router.put("/:id", protect, upload.array("images", 10), updateProduct);
+// UPDATE
+router.put("/:id", protect, uploadMultiple, updateProduct);
 
-// Soft delete (seller)
+// DELETE
 router.delete("/:id", protect, deleteProduct);
 
-// =====================================
-// 🔥 ADMIN ROUTES
-// =====================================
-
-// Permanent delete
-router.delete("/admin/permanent/:id", protect, admin, adminDeleteProduct);
+router.delete("/admin/permanent/:id", protect, adminDeleteProduct);
 
 export default router;
