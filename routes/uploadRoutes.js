@@ -1,15 +1,14 @@
-// routes/uploadRoutes.js
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-import { upload } from "../config/cloudinary.js";
+import { uploadMultiple } from "../config/cloudinary.js";
 
 const router = express.Router();
 
 // ===============================
 // 🔹 MULTIPLE FILE UPLOAD
 // ===============================
-// Use field name "files" in frontend FormData
-router.post("/multiple", protect, upload.array("files", 5), async (req, res) => {
+// Field name: "images"
+router.post("/multiple", protect, uploadMultiple, async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: "No files uploaded" });
@@ -23,7 +22,7 @@ router.post("/multiple", protect, upload.array("files", 5), async (req, res) => 
     res.json({
       success: true,
       urls,           // array of uploaded URLs
-      raw: req.files, // complete files info if needed
+      raw: req.files, // full file info
     });
   } catch (err) {
     console.error("⚠️ Multi Upload Error:", err);
