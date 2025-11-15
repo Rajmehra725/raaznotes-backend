@@ -8,11 +8,13 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
-    slug: {
-      type: String,
-      unique: true,
-      index: true,
-    },
+   slug: {
+  type: String,
+  unique: true,
+  lowercase: true,
+  index: true,
+}
+,
 
     description: {
       type: String,
@@ -24,10 +26,11 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
-    category: {
-      type: String,
-      required: true,
-    },
+ category: {
+  type: String,
+  required: true,
+  index: true,
+},
 
     stock: {
       type: Number,
@@ -43,7 +46,7 @@ const productSchema = new mongoose.Schema(
     seller: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
     },
 
     rating: {

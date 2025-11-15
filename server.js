@@ -31,9 +31,10 @@ connectDB();
 // ==========================
 // ⭐ NEW IMPORTS (E-Commerce)
 // ==========================
+// ==========================
 import productRoutes from "./routes/productRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
-import orderRoutes from "./routes/bookingRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js"; // ✔ FIXED NAME
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -58,7 +59,8 @@ app.use("/api/news", newsRoutes);
 // ==========================
 app.use("/api/products", productRoutes);
 app.use("/api/reviews", reviewRoutes);
-app.use("/api/orders", orderRoutes);
+app.use("/api/bookings", bookingRoutes); // ✔ FIXED PATH
+
 
 // Test Route
 app.get("/", (req, res) => {

@@ -9,13 +9,23 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Add or edit review
-router.post("/", protect, addOrUpdateReview);
+/*  
+===========================================
+ ⭐ ROUTE STRUCTURE (BEST PRACTICE)
+-------------------------------------------
+ POST   /api/reviews/:productId       → Add or Update Review
+ GET    /api/reviews/product/:id      → Get all reviews of a product
+ DELETE /api/reviews/:id              → Delete review (only owner)
+===========================================
+*/
 
-// Delete review
+// ⭐ Add or update review for a product
+router.post("/:productId", protect, addOrUpdateReview);
+
+// ⭐ Delete a review
 router.delete("/:id", protect, deleteReview);
 
-// Get all reviews of a product
+// ⭐ Get reviews of a product
 router.get("/product/:id", getReviewsOfProduct);
 
 export default router;

@@ -1,7 +1,6 @@
 import Product from "../models/Product.js";
 import slugify from "slugify";
 
-
 // -----------------------------------------------
 // CREATE PRODUCT
 // -----------------------------------------------
@@ -26,7 +25,7 @@ export const createProduct = async (req, res) => {
       category,
       stock,
       images,
-      seller: req.user.id,
+      seller: req.user._id, // FIXED
     });
 
     res.json({ success: true, product });
@@ -34,7 +33,6 @@ export const createProduct = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 
 // -----------------------------------------------
@@ -56,11 +54,11 @@ export const getAllProducts = async (req, res) => {
       query.category = category;
     }
 
-    // Price range
+    // Price range FIXED (Number conversion)
     if (minPrice || maxPrice) {
       query.price = {};
-      if (minPrice) query.price.$gte = minPrice;
-      if (maxPrice) query.price.$lte = maxPrice;
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
     }
 
     // Pagination
@@ -97,7 +95,6 @@ export const getAllProducts = async (req, res) => {
 };
 
 
-
 // -----------------------------------------------
 // GET SINGLE PRODUCT
 // -----------------------------------------------
@@ -118,7 +115,6 @@ export const getSingleProduct = async (req, res) => {
 };
 
 
-
 // -----------------------------------------------
 // UPDATE PRODUCT (Only seller can update)
 // -----------------------------------------------
@@ -126,13 +122,14 @@ export const updateProduct = async (req, res) => {
   try {
     const updates = req.body;
 
-    // If name updated → update slug
+    // Fix slug update
     if (updates.name) {
       updates.slug = slugify(updates.name, { lower: true });
     }
 
+    // Seller check FIXED
     const product = await Product.findOneAndUpdate(
-      { _id: req.params.id, seller: req.user.id },
+      { _id: req.params.id, seller: req.user._id },
       updates,
       { new: true }
     );
@@ -148,14 +145,13 @@ export const updateProduct = async (req, res) => {
 };
 
 
-
 // -----------------------------------------------
 // SOFT DELETE PRODUCT (Seller hide)
 // -----------------------------------------------
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findOneAndUpdate(
-      { _id: req.params.id, seller: req.user.id },
+      { _id: req.params.id, seller: req.user._id }, // FIXED
       { isActive: false },
       { new: true }
     );
@@ -171,9 +167,8 @@ export const deleteProduct = async (req, res) => {
 };
 
 
-
 // -----------------------------------------------
-// ADMIN: PERMANENT DELETE PRODUCT (optional)
+// ADMIN: PERMANENT DELETE PRODUCT
 // -----------------------------------------------
 export const adminDeleteProduct = async (req, res) => {
   try {
