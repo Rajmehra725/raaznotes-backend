@@ -1,19 +1,33 @@
+// routes/uploadRoutes.js
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { upload } from "../config/cloudinary.js";
 
 const router = express.Router();
 
-// Single file upload -> returns secure_url
-router.post("/", protect, upload.single("file"), async (req, res) => {
+// ===============================
+// 🔹 MULTIPLE FILE UPLOAD
+// ===============================
+// Use field name "files" in frontend FormData
+router.post("/multiple", protect, upload.array("files", 5), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    // multer-storage-cloudinary sets req.file.path to secure_url sometimes, or req.file?.path / req.file?.filename
-    const url = req.file.path || req.file?.secure_url || req.file?.url || null;
-    res.json({ url, raw: req.file });
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    // Extract Cloudinary URLs
+    const urls = req.files.map(
+      (file) => file.path || file?.secure_url || file?.url
+    );
+
+    res.json({
+      success: true,
+      urls,           // array of uploaded URLs
+      raw: req.files, // complete files info if needed
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Upload failed" });
+    console.error("⚠️ Multi Upload Error:", err);
+    res.status(500).json({ success: false, message: "Upload failed" });
   }
 });
 
