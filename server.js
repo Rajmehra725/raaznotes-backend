@@ -18,23 +18,37 @@ import { Server as IOServer } from "socket.io";
 import chatRoutes from "./routes/chatRoutes.js";
 import newsRoutes from "./routes/newsRoutes.js";
 
+// ⭐ NEW IMPORTS (E-Commerce)
+import productRoutes from "./routes/productRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+
 dotenv.config();
 const app = express();
 
-// Middleware
-app.use(cors());
+// ==========================
+// ⭐ FIXED CORS (100% WORKING)
+// ==========================
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+
+      // ⭐ NEW Main Frontend
+      "https://lyf-fv59.onrender.com"
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Middlewares
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // ⭐ Important for file uploads
 
-// Connect to MongoDB
+// Connect DB
 connectDB();
-
-// ==========================
-// ⭐ NEW IMPORTS (E-Commerce)
-// ==========================
-// ==========================
-import productRoutes from "./routes/productRoutes.js";
-import reviewRoutes from "./routes/reviewRoutes.js";
-import bookingRoutes from "./routes/bookingRoutes.js"; // ✔ FIXED NAME
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -44,7 +58,6 @@ app.use("/api/safety", safetyRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/admin", adminRoutes);
 
-// newly added route groups
 app.use("/api/posts", postRoutes);
 app.use("/api/stories", storyRoutes);
 app.use("/api/users", userRoutes);
@@ -54,26 +67,34 @@ app.use("/api/auth/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/news", newsRoutes);
 
-// ==========================
 // ⭐ NEW ROUTES (E-Commerce)
-// ==========================
 app.use("/api/products", productRoutes);
 app.use("/api/reviews", reviewRoutes);
-app.use("/api/bookings", bookingRoutes); // ✔ FIXED PATH
-
+app.use("/api/bookings", bookingRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
   res.send("LYF Backend API is Running...");
 });
 
-// ✅ Create HTTP server & Socket.io
+// ==========================
+// ⭐ SOCKET.IO SERVER
+// ==========================
 const server = http.createServer(app);
+
 const io = new IOServer(server, {
-  cors: { origin: "*" }
+  cors: {
+    origin: [
+      "http://localhost:3000",
+      "https://raaznotes-frontend.onrender.com",
+      "https://raaznotes-frontend.vercel.app",
+      "https://lyf-fv59.onrender.com"  // ⭐ New frontend
+    ],
+    credentials: true,
+  }
 });
 
-// make io available in req.app
+// make io available everywhere
 app.set("io", io);
 
 let onlineUsers = new Map();
@@ -81,13 +102,11 @@ let onlineUsers = new Map();
 io.on("connection", (socket) => {
   console.log("⚡ User connected:", socket.id);
 
-  // 📍 User joins with userId
   socket.on("join", (userId) => {
     onlineUsers.set(userId, socket.id);
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
   });
 
-  // ✍️ Typing indicator
   socket.on("typing", ({ senderId, receiverId }) => {
     const receiverSocket = onlineUsers.get(receiverId);
     if (receiverSocket) {
@@ -102,7 +121,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 📨 Send message instantly
   socket.on("sendMessage", ({ senderId, receiverId, message }) => {
     const receiverSocket = onlineUsers.get(receiverId);
     if (receiverSocket) {
@@ -110,7 +128,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 👁️ Message seen
   socket.on("seenMessage", ({ senderId, receiverId, messageId }) => {
     const senderSocket = onlineUsers.get(senderId);
     if (senderSocket) {
@@ -118,7 +135,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 🚪 Disconnect
   socket.on("disconnect", () => {
     for (const [uid, sid] of onlineUsers.entries()) {
       if (sid === socket.id) {
@@ -126,11 +142,12 @@ io.on("connection", (socket) => {
         break;
       }
     }
+
     io.emit("onlineUsers", Array.from(onlineUsers.keys()));
     console.log("❌ User disconnected:", socket.id);
   });
 });
 
-// ✅ Server
+// Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
