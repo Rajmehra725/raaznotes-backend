@@ -11,7 +11,6 @@ const productSchema = new mongoose.Schema(
 
     slug: {
       type: String,
-      unique: true,
       lowercase: true,
       index: true,
     },
@@ -37,18 +36,16 @@ const productSchema = new mongoose.Schema(
       default: 1,
     },
 
-    // 🔥 MULTIPLE IMAGES SUPPORTED (Cloudinary URLs)
     images: [
       {
         type: String,
-        required: false,
       },
     ],
 
     seller: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false,
+      required: true,
     },
 
     rating: {
@@ -69,13 +66,11 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-
-// 🔥 AUTO-SLUG GENERATION (Example: "Red T-Shirt" → "red-t-shirt")
+// Auto-generate slug on create
 productSchema.pre("save", function (next) {
   if (!this.isModified("name")) return next();
   this.slug = slugify(this.name, { lower: true });
   next();
 });
-
 
 export default mongoose.model("Product", productSchema);

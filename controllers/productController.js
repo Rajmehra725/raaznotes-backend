@@ -6,28 +6,36 @@ import slugify from "slugify";
 // -----------------------------------------------
 export const createProduct = async (req, res) => {
   try {
+    console.log("FILES RECEIVED:", req.files);
+    console.log("BODY RECEIVED:", req.body);
+
     const imageUrls = req.files?.map(f => f.path) || [];
 
     const product = await Product.create({
       name: req.body.name,
+      slug: slugify(req.body.name, { lower: true }),   // ✅ ADD SLUG
       price: req.body.price,
       description: req.body.description,
+      category: req.body.category || null,
       seller: req.user._id,
       images: imageUrls
     });
 
     res.json(product);
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "Product create failed" });
   }
 };
 
+
+// -----------------------------------------------
+// UPDATE PRODUCT
+// -----------------------------------------------
 export const updateProduct = async (req, res) => {
   try {
-    // new images from frontend
     const newImages = req.files?.map(f => f.path) || [];
 
-    // old images array from frontend
     let oldImages = [];
     if (req.body.oldImages) {
       oldImages = JSON.parse(req.body.oldImages);
@@ -37,20 +45,25 @@ export const updateProduct = async (req, res) => {
       req.params.id,
       {
         name: req.body.name,
+        slug: slugify(req.body.name, { lower: true }),  // ✅ SLUG UPDATE
         price: req.body.price,
         description: req.body.description,
-        images: [...oldImages, ...newImages].slice(0, 5) // max 5
+        category: req.body.category || null,
+        images: [...oldImages, ...newImages].slice(0, 5)
       },
       { new: true }
     );
 
     res.json(updated);
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "Update failed" });
   }
 };
+
+
 // -----------------------------------------------
-// GET ALL PRODUCTS (Search + Filter + Sort + Pagination)
+// GET ALL PRODUCTS
 // -----------------------------------------------
 export const getAllProducts = async (req, res) => {
   try {
@@ -58,29 +71,24 @@ export const getAllProducts = async (req, res) => {
 
     let query = { isActive: true };
 
-    // Search
     if (search) {
       query.name = { $regex: search, $options: "i" };
     }
 
-    // Category filter
     if (category) {
       query.category = category;
     }
 
-    // Price range FIXED (Number conversion)
     if (minPrice || maxPrice) {
       query.price = {};
       if (minPrice) query.price.$gte = Number(minPrice);
       if (maxPrice) query.price.$lte = Number(maxPrice);
     }
 
-    // Pagination
     const currentPage = Number(page) || 1;
     const perPage = Number(limit) || 20;
     const skip = (currentPage - 1) * perPage;
 
-    // Sorting
     let sortOption = {};
     if (sort === "price_low") sortOption.price = 1;
     if (sort === "price_high") sortOption.price = -1;
@@ -104,6 +112,7 @@ export const getAllProducts = async (req, res) => {
     });
 
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -128,13 +137,14 @@ export const getSingleProduct = async (req, res) => {
   }
 };
 
+
 // -----------------------------------------------
 // SOFT DELETE PRODUCT (Seller hide)
 // -----------------------------------------------
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findOneAndUpdate(
-      { _id: req.params.id, seller: req.user._id }, // FIXED
+      { _id: req.params.id, seller: req.user._id },
       { isActive: false },
       { new: true }
     );
@@ -151,7 +161,7 @@ export const deleteProduct = async (req, res) => {
 
 
 // -----------------------------------------------
-// ADMIN: PERMANENT DELETE PRODUCT
+// ADMIN DELETE PRODUCT
 // -----------------------------------------------
 export const adminDeleteProduct = async (req, res) => {
   try {

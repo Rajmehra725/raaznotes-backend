@@ -1,9 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-
-import {
-  uploadMultiple   // <-- Yahi sahi wala middleware
-} from "../config/cloudinary.js";
+import { uploadMultiple } from "../config/cloudinary.js";
 
 import {
   createProduct,
@@ -16,21 +13,22 @@ import {
 
 const router = express.Router();
 
-// CREATE PRODUCT
+// CREATE
 router.post("/create", protect, uploadMultiple, createProduct);
 
-// GET ALL
+// GET ALL (must be first)
 router.get("/", getAllProducts);
 
 // GET SINGLE
 router.get("/:id", getSingleProduct);
 
+// ADMIN DELETE (must be before normal delete)
+router.delete("/admin/permanent/:id", protect, adminDeleteProduct);
+
 // UPDATE
 router.put("/:id", protect, uploadMultiple, updateProduct);
 
-// DELETE
+// DELETE (soft)
 router.delete("/:id", protect, deleteProduct);
-
-router.delete("/admin/permanent/:id", protect, adminDeleteProduct);
 
 export default router;

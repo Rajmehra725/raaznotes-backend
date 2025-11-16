@@ -1,29 +1,37 @@
 import Review from "../models/Review.js";
 import Product from "../models/Product.js";
 
-
 // ⭐ ADD or UPDATE review
 export const addOrUpdateReview = async (req, res) => {
   try {
     const { productId, comment, rating } = req.body;
 
+    if (!productId || !comment || !rating) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Rating must be between 1–5" });
+    }
+
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ error: "Product not found" });
 
-    const existingReview = await Review.findOne({
+    // Prevent seller from reviewing own product
+    if (product.seller.toString() === req.user.id) {
+      return res.status(400).json({ error: "Cannot review your own product" });
+    }
+
+    let review = await Review.findOne({
       product: productId,
       user: req.user.id,
     });
 
-    let review;
-
-    if (existingReview) {
-      // 👉 If user already reviewed, update it
-      existingReview.comment = comment;
-      existingReview.rating = rating;
-      review = await existingReview.save();
+    if (review) {
+      review.comment = comment;
+      review.rating = rating;
+      await review.save();
     } else {
-      // 👉 Create new review
       review = await Review.create({
         product: productId,
         user: req.user.id,
@@ -32,9 +40,8 @@ export const addOrUpdateReview = async (req, res) => {
       });
     }
 
-    // ⭐ Update product rating & count
+    // Recalculate average rating
     const reviews = await Review.find({ product: productId });
-
     const avgRating =
       reviews.reduce((sum, r) => sum + Number(r.rating), 0) /
       (reviews.length || 1);
@@ -45,11 +52,11 @@ export const addOrUpdateReview = async (req, res) => {
     });
 
     res.json({ success: true, review });
+
   } catch (error) {
     res.status(500).json({ error: "Something went wrong" });
   }
 };
-
 
 
 // ⭐ DELETE review
@@ -64,7 +71,6 @@ export const deleteReview = async (req, res) => {
       return res.status(404).json({ error: "Review not found or unauthorized" });
     }
 
-    // ⭐ Recalculate ratings after delete
     const reviews = await Review.find({ product: review.product });
 
     const avgRating =
@@ -77,11 +83,11 @@ export const deleteReview = async (req, res) => {
     });
 
     res.json({ success: true, message: "Review deleted" });
+
   } catch (error) {
     res.status(500).json({ error: "Failed to delete review" });
   }
 };
-
 
 
 // ⭐ GET all reviews of a product

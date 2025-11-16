@@ -23,9 +23,24 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ error: "You cannot book your own product" });
     }
 
+    // ❌ Product inactive
+    if (!product.isActive) {
+      return res.status(400).json({ error: "Product is not available" });
+    }
+
     // ❌ Stock check
     if (quantity > product.stock) {
       return res.status(400).json({ error: "Insufficient stock" });
+    }
+
+    // ❌ Duplicate booking check
+    const existing = await Booking.findOne({
+      buyerId: req.user._id,
+      productId,
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: "You already booked this product" });
     }
 
     const booking = await Booking.create({
@@ -34,6 +49,10 @@ export const createBooking = async (req, res) => {
       buyerId: req.user._id,
       quantity,
     });
+
+    // 🔥 Reduce stock
+    product.stock -= quantity;
+    await product.save();
 
     res.status(201).json({
       success: true,
@@ -55,7 +74,7 @@ export const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({
       buyerId: req.user._id,
-    }).populate("productId");
+    }).populate("productId", "name price images category");
 
     res.json({
       count: bookings.length,
@@ -75,7 +94,7 @@ export const getReceivedBookings = async (req, res) => {
     const bookings = await Booking.find({
       sellerId: req.user._id,
     })
-      .populate("productId")
+      .populate("productId", "name price images category")
       .populate("buyerId", "name email avatar");
 
     res.json({

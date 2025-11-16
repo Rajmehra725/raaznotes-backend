@@ -29,21 +29,24 @@ const bookingSchema = new mongoose.Schema(
       min: [1, "Quantity cannot be less than 1"],
     },
 
+    priceAtBooking: {
+      type: Number,
+      required: true,
+    },
+
     status: {
       type: String,
       enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
       default: "pending",
     },
+
+    cancelledAt: Date,
+    deliveredAt: Date,
   },
   { timestamps: true }
 );
 
-// =============================
-// 🔥 Virtual Field (Optional)
-// For easily getting total price inside booking
-// =============================
-// bookingSchema.virtual("totalPrice").get(function () {
-//   return this.quantity * this.productId.price;
-// });
+// Prevent duplicate booking
+bookingSchema.index({ buyerId: 1, productId: 1 }, { unique: true });
 
 export default mongoose.model("Booking", bookingSchema);

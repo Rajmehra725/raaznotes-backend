@@ -30,4 +30,13 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// ⭐ Prevent one user from reviewing same product twice
+reviewSchema.index({ product: 1, user: 1 }, { unique: true });
+
+// ⭐ Auto populate user details on all finds (optional)
+reviewSchema.pre(/^find/, function (next) {
+  this.populate("user", "name email");
+  next();
+});
+
 export default mongoose.model("Review", reviewSchema);
