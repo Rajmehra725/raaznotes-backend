@@ -24,6 +24,15 @@ const upload = multer({
   storage,
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 });
+// Album Photos Storage
+const albumStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "wedding_albums",
+  },
+});
+
+export const uploadAlbumPhotos = multer({ storage: albumStorage }).array("photos", 200);
 
 export const uploadSingle = upload.single("image");
 export const uploadMultiple = upload.array("images", 10); // ✅ matches frontend

@@ -22,7 +22,7 @@ import newsRoutes from "./routes/newsRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
-
+import albumRoutes from "./routes/albumRoutes.js";
 dotenv.config();
 const app = express();
 
@@ -72,6 +72,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/bookings", bookingRoutes);
 
+app.use("/api/albums", albumRoutes);
 // Test Route
 app.get("/", (req, res) => {
   res.send("LYF Backend API is Running...");
